@@ -1,40 +1,30 @@
-# Busca de e-mails com Playwright
+# Busca de PDFs no Gmail por IMAP
 
-Abre Gmail ou Outlook no navegador e procura mensagens não lidas usando uma
-palavra-chave configurada no `.env`.
-
-## Instalação
-
-```powershell
-cd Avaliacao_2
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-```
+O programa acessa o Gmail sem navegador, procura mensagens não lidas com a
+palavra-chave configurada e salva os anexos PDF em `Documentos_OK`.
 
 ## Configuração
 
-Crie o arquivo `.env` baseado no `.env.example`:
+Instale as dependências:
 
-```env
-EMAIL_PROVIDER=gmail
-EMAIL_KEYWORD=cadastro
-BROWSER_CHANNEL=chrome
-HEADLESS=false
+```powershell
+pip install -r requirements.txt
 ```
 
-`EMAIL_PROVIDER` aceita `gmail` ou `outlook`. A senha de app não é usada pelo
-Playwright, pois ela funciona com IMAP e não com o login web.
+Crie o `.env`:
+
+```env
+EMAIL=seu_email@gmail.com
+EMAIL_APP_PASSWORD=sua_senha_de_app
+EMAIL_KEYWORD=cadastro avaliacao 2
+```
+
+A senha deve ser uma senha de app do Google, não a senha normal. A conta precisa
+ter verificação em duas etapas. Mensagens processadas com pelo menos um PDF são
+marcadas como lidas para não serem baixadas novamente.
 
 ## Execução
 
 ```powershell
 python src/main.py
 ```
-
-Na primeira execução, faça login na janela aberta. A sessão ficará armazenada
-em `.playwright-profile`. Nas execuções seguintes, o navegador reutilizará esse
-login. Depois da busca, os e-mails encontrados são abertos e todos os seus anexos
-são salvos em `Avaliacao_2/Documentos_OK`. A pasta é criada automaticamente.
-Como os e-mails são abertos para acessar os anexos, o Gmail pode marcá-los como
-lidos.
