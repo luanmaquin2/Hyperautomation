@@ -34,4 +34,7 @@ python src/main.py
 
 Na primeira execução, faça login na janela aberta. A sessão ficará armazenada
 em `.playwright-profile`. Nas execuções seguintes, o navegador reutilizará esse
-login. As mensagens não são abertas ou marcadas como lidas.
+login. Depois da busca, os e-mails encontrados são abertos e todos os seus anexos
+são salvos em `Avaliacao_2/Documentos_OK`. A pasta é criada automaticamente.
+Como os e-mails são abertos para acessar os anexos, o Gmail pode marcá-los como
+lidos.
