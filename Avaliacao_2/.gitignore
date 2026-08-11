@@ -3,3 +3,6 @@
 __pycache__/
 .env
 Documentos_OK/
+Documentos_Pendentes/
+Documentos_Arquivados/
+Planilha_Mestra.backup_*.xlsx
