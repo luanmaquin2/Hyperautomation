@@ -6,13 +6,16 @@ import imaplib
 import os
 import re
 import socket
+import smtplib
 import time
 import unicodedata
 from io import BytesIO
 from itertools import product
 from email import message_from_bytes
+from email.message import EmailMessage
 from email.header import decode_header, make_header
 from email.message import Message
+from email.utils import parseaddr
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -124,6 +127,52 @@ def baixar_pdfs(mensagem: Message) -> tuple[list[Path], bool]:
     return arquivos, True
 
 
+def enviar_resposta(
+    email_conta: str,
+    senha_app: str,
+    mensagem_original: Message,
+    aprovado: bool,
+) -> None:
+    nome_remetente, email_remetente = parseaddr(
+        decodificar(mensagem_original.get("Reply-To") or mensagem_original.get("From"))
+    )
+    if not email_remetente:
+        raise ValueError("O e-mail original não possui um remetente válido.")
+
+    assunto_original = decodificar(mensagem_original.get("Subject"))
+    resposta = EmailMessage()
+    resposta["From"] = email_conta
+    resposta["To"] = email_remetente
+    resposta["Subject"] = (
+        assunto_original if assunto_original.lower().startswith("re:")
+        else f"Re: {assunto_original}"
+    )
+    id_mensagem = mensagem_original.get("Message-ID")
+    if id_mensagem:
+        resposta["In-Reply-To"] = id_mensagem
+        resposta["References"] = id_mensagem
+
+    saudacao = f"Olá, {nome_remetente}," if nome_remetente else "Olá,"
+    if aprovado:
+        corpo = (
+            f"{saudacao}\n\nSeus documentos foram recebidos, validados e aprovados.\n\n"
+            "Atenciosamente,\nEquipe de Cadastro"
+        )
+    else:
+        corpo = (
+            f"{saudacao}\n\nNão foi possível aprovar sua solicitação. Existem "
+            "documentos faltando ou arquivos que não estão legíveis. Por favor, "
+            "revise e envie novamente os documentos com Nome, CPF e Endereço.\n\n"
+            "Atenciosamente,\nEquipe de Cadastro"
+        )
+    resposta.set_content(corpo)
+
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=20) as servidor:
+        servidor.login(email_conta, senha_app.replace(" ", ""))
+        servidor.send_message(resposta)
+    print(f"Resposta enviada para {email_remetente}.", flush=True)
+
+
 def buscar_e_baixar(email: str, senha_app: str, palavra_chave: str) -> tuple[int, int]:
     palavra_normalizada = normalizar(palavra_chave)
     palavras = re.findall(r"\w+", palavra_normalizada)
@@ -162,8 +211,8 @@ def buscar_e_baixar(email: str, senha_app: str, palavra_chave: str) -> tuple[int
                 total += len(arquivos)
             else:
                 total_pendentes += len(arquivos)
-            if arquivos:
-                caixa.store(identificador, "+FLAGS", "\\Seen")
+            enviar_resposta(email, senha_app, mensagem, conjunto_completo)
+            caixa.store(identificador, "+FLAGS", "\\Seen")
     return total, total_pendentes
 
 
@@ -187,6 +236,8 @@ def main() -> None:
         raise SystemExit("A conexão IMAP excedeu o limite de 20 segundos.") from erro
     except OSError as erro:
         raise SystemExit(f"Não foi possível conectar ao Gmail: {erro}") from erro
+    except smtplib.SMTPException as erro:
+        raise SystemExit(f"Não foi possível enviar o e-mail de resposta: {erro}") from erro
 
     print(f"Download concluído: {total} arquivo(s) PDF salvo(s).")
     print(f"Documentos pendentes: {total_pendentes} arquivo(s) PDF salvo(s).")
